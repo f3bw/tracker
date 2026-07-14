@@ -4,7 +4,7 @@ import { getActivity, listGear } from '@/lib/db';
 import { currentUserId } from '@/lib/current-user';
 import { RouteSvg } from '@/components/route-svg/route-svg';
 import { Sparkline } from '@/components/sparkline/sparkline';
-import type { Metrics, Series } from '@/lib/fit';
+import type { Lap, Metrics, Series } from '@/lib/fit';
 import styles from './page.module.css';
 
 export const dynamic = 'force-dynamic';
@@ -25,6 +25,7 @@ export default async function ActivityDetail({ params }: { params: Promise<{ id:
     const watches = gear.filter((g) => g.kind === 'watch');
     const metrics: Metrics = activity.metrics ? JSON.parse(activity.metrics) : {};
     const series: Series = activity.series ? JSON.parse(activity.series) : {};
+    const laps: Lap[] = activity.laps ? JSON.parse(activity.laps) : [];
     const pace =
         activity.distance_km && activity.duration_min
             ? activity.duration_min / activity.distance_km
@@ -70,6 +71,21 @@ export default async function ActivityDetail({ params }: { params: Promise<{ id:
                     <>
                         <dt>cadence</dt>
                         <dd>{metrics.avg_cadence} spm</dd>
+                    </>
+                )}
+                {metrics.avg_power != null && (
+                    <>
+                        <dt>power</dt>
+                        <dd>
+                            {metrics.avg_power} avg
+                            {metrics.max_power != null && ` · ${metrics.max_power} max`} W
+                        </dd>
+                    </>
+                )}
+                {metrics.avg_temp_c != null && (
+                    <>
+                        <dt>temperature</dt>
+                        <dd>{metrics.avg_temp_c} °C</dd>
                     </>
                 )}
                 <dt>shoe</dt>
@@ -121,7 +137,33 @@ export default async function ActivityDetail({ params }: { params: Promise<{ id:
                 )}
                 {series.hr && <Sparkline label="heart rate" values={series.hr} unit="bpm" />}
                 {series.cad && <Sparkline label="cadence" values={series.cad} unit="spm" />}
+                {series.pw && <Sparkline label="power" values={series.pw} unit="W" />}
+                {series.temp && <Sparkline label="temperature" values={series.temp} unit="°C" />}
             </div>
+            {laps.length > 0 && (
+                <table className={styles.laps}>
+                    <thead>
+                        <tr>
+                            <th>lap</th>
+                            <th>time</th>
+                            <th>km</th>
+                            <th>pace</th>
+                            <th>hr</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {laps.map((l, i) => (
+                            <tr key={i}>
+                                <td>{i + 1}</td>
+                                <td>{l.min} min</td>
+                                <td>{l.km ?? '—'}</td>
+                                <td>{l.km && l.min ? `${paceStr(l.min / l.km)} /km` : '—'}</td>
+                                <td>{l.hr ?? '—'}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            )}
             <form action={removeActivity} className={styles.delete}>
                 <input type="hidden" name="id" value={activity.id} />
                 <button type="submit">delete</button>

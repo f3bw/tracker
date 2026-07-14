@@ -70,6 +70,26 @@
         margin-top: var(--space-xl);
     }
 
+    .laps {
+        border-collapse: collapse;
+        margin-top: var(--space-xl);
+        max-width: 24rem;
+        width: 100%;
+    }
+
+    .laps th {
+        color: var(--color-muted-foreground);
+        font-size: var(--font-size-sm);
+        font-weight: var(--font-weight-normal);
+    }
+
+    .laps th,
+    .laps td {
+        border-bottom: 1px solid var(--color-border);
+        padding: var(--space-xs) var(--space-md) var(--space-xs) 0;
+        text-align: left;
+    }
+
     .delete {
         margin-top: var(--space-2xl);
     }

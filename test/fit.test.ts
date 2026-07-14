@@ -15,8 +15,8 @@ test('extractMetrics: scalars, pace conversion, run cadence doubling, omissions'
         avg_cadence: 85, // per leg -> 170 for run
     };
     const records = [
-        { enhanced_altitude: 0.01, heart_rate: 140, speed: 3.333, cadence: 84 },
-        { enhanced_altitude: 0.012, heart_rate: 150, speed: 2.777, cadence: 86 },
+        { enhanced_altitude: 0.01, heart_rate: 140, speed: 3.333, cadence: 84, temperature: 18, power: 250 },
+        { enhanced_altitude: 0.012, heart_rate: 150, speed: 2.777, cadence: 86, temperature: 19, power: 260 },
         { enhanced_altitude: 0.011, heart_rate: 155, speed: 0.1, cadence: 85 }, // standing still: no pace point
     ];
     const { metrics, series } = extractMetrics(session, records, 'run');
@@ -31,11 +31,28 @@ test('extractMetrics: scalars, pace conversion, run cadence doubling, omissions'
     assert.deepEqual(series?.hr, [140, 150, 155]);
     assert.deepEqual(series?.pace, [5, 6]); // 3.333 m/s = 5:00/km, 2.777 = 6:00/km
     assert.deepEqual(series?.cad, [168, 172, 170]);
+    assert.deepEqual(series?.temp, [18, 19]);
+    assert.deepEqual(series?.pw, [250, 260]);
     // ride cadence stays raw; empty input -> nulls
     const ride = extractMetrics({ avg_cadence: 90 }, [], 'ride');
     assert.equal(ride.metrics?.avg_cadence, 90);
     assert.equal(ride.series, null);
     assert.deepEqual(extractMetrics({}, [], 'run'), { metrics: null, series: null });
+});
+
+test('extractLaps: intervals kept, single lap dropped', async () => {
+    const { extractLaps } = await import('../src/lib/fit.ts');
+    assert.equal(extractLaps([{ total_timer_time: 3600 }]), null);
+    assert.deepEqual(
+        extractLaps([
+            { total_timer_time: 300, total_distance: 1.0, avg_heart_rate: 160.6 },
+            { total_timer_time: 60 }, // HIIT rest round: no distance
+        ]),
+        [
+            { min: 5, km: 1, hr: 161 },
+            { min: 1 },
+        ],
+    );
 });
 
 test('downsample caps length and keeps endpoints region', async () => {
@@ -71,6 +88,7 @@ test('db activity round-trip, shoe totals, and per-user isolation', async () => 
         route: JSON.stringify([[52.37, 4.89]]),
         metrics: JSON.stringify({ ascent_m: 12 }),
         series: JSON.stringify({ hr: [140, 150] }),
+        laps: JSON.stringify([{ min: 5, km: 1 }]),
     });
     const a = await db.getActivity(id, userId);
     assert.equal(a?.distance_km, 8.5);
@@ -114,6 +132,7 @@ test('db activity round-trip, shoe totals, and per-user isolation', async () => 
             route: null,
             metrics: null,
             series: null,
+            laps: null,
         }),
     );
     await db.deleteActivity(id, userId);

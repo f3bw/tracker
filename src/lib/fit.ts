@@ -7,6 +7,9 @@ export type Metrics = {
     avg_hr?: number;
     max_hr?: number;
     avg_cadence?: number;
+    avg_temp_c?: number;
+    avg_power?: number;
+    max_power?: number;
 };
 
 export type Series = {
@@ -14,6 +17,14 @@ export type Series = {
     hr?: number[];
     pace?: number[];
     cad?: number[];
+    temp?: number[];
+    pw?: number[];
+};
+
+export type Lap = {
+    min: number;
+    km?: number;
+    hr?: number;
 };
 
 export type ParsedFit = {
@@ -24,6 +35,7 @@ export type ParsedFit = {
     route: [number, number][] | null;
     metrics: Metrics | null;
     series: Series | null;
+    laps: Lap[] | null;
 };
 
 // fit-file-parser already converts semicircles to degrees (formatByType, sint32)
@@ -58,6 +70,9 @@ export function extractMetrics(
     if (session.avg_cadence != null) {
         metrics.avg_cadence = Math.round(session.avg_cadence * cadenceFactor(sport));
     }
+    if (session.avg_temperature != null) metrics.avg_temp_c = Math.round(session.avg_temperature);
+    if (session.avg_power != null) metrics.avg_power = Math.round(session.avg_power);
+    if (session.max_power != null) metrics.max_power = Math.round(session.max_power);
 
     const series: Series = {};
     const collect = (pick: (r: any) => number | null | undefined): number[] =>
@@ -75,15 +90,30 @@ export function extractMetrics(
         return speed > 0.5 ? 1000 / speed / 60 : null; // min/km, skip standing still
     });
     const cad = collect((r) => (r.cadence != null ? r.cadence * cadenceFactor(sport) : null));
+    const temp = collect((r) => r.temperature);
+    const pw = collect((r) => r.power);
     if (alt.length > 1) series.alt = alt;
     if (hr.length > 1) series.hr = hr;
     if (pace.length > 1) series.pace = pace;
     if (cad.length > 1) series.cad = cad;
+    if (temp.length > 1) series.temp = temp;
+    if (pw.length > 1) series.pw = pw;
 
     return {
         metrics: Object.keys(metrics).length ? metrics : null,
         series: Object.keys(series).length ? series : null,
     };
+}
+
+export function extractLaps(laps: any[]): Lap[] | null {
+    // one lap = the whole activity, nothing to show
+    if (laps.length < 2) return null;
+    return laps.slice(0, 100).map((l: any) => {
+        const lap: Lap = { min: round1((l.total_timer_time ?? l.total_elapsed_time ?? 0) / 60) };
+        if (l.total_distance) lap.km = Math.round(l.total_distance * 100) / 100;
+        if (l.avg_heart_rate != null) lap.hr = Math.round(l.avg_heart_rate);
+        return lap;
+    });
 }
 
 const SPORT_MAP: Record<string, Sport> = {
@@ -122,5 +152,6 @@ export async function parseFit(buffer: Buffer<ArrayBuffer>): Promise<ParsedFit> 
         distance_km: session.total_distance ? Math.round(session.total_distance * 100) / 100 : null,
         route: points.length ? downsample(points) : null,
         ...extractMetrics(session, data.records ?? [], sport),
+        laps: extractLaps(data.laps ?? []),
     };
 }

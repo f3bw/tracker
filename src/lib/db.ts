@@ -34,6 +34,7 @@ export type Activity = {
     route: string | null;
     metrics: string | null;
     series: string | null;
+    laps: string | null;
 };
 
 const client = createClient({
@@ -71,7 +72,8 @@ const ready = (async () => {
                 watch_id INTEGER REFERENCES shoes(id) ON DELETE SET NULL,
                 route TEXT,
                 metrics TEXT,
-                series TEXT
+                series TEXT,
+                laps TEXT
             )`,
         ],
         'write',
@@ -83,6 +85,7 @@ const ready = (async () => {
         `ALTER TABLE shoes ADD COLUMN is_default INTEGER NOT NULL DEFAULT 0`,
         `ALTER TABLE activities ADD COLUMN metrics TEXT`,
         `ALTER TABLE activities ADD COLUMN series TEXT`,
+        `ALTER TABLE activities ADD COLUMN laps TEXT`,
     ]) {
         await client.execute(sql).catch(() => {}); // duplicate column = already migrated
     }
@@ -134,8 +137,8 @@ export async function insertActivity(
     a: Omit<Activity, 'id' | 'shoe_name' | 'watch_name'>,
 ): Promise<number> {
     const r = await run(
-        `INSERT INTO activities (user_id, date, sport, duration_min, distance_km, notes, shoe_id, watch_id, route, metrics, series)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO activities (user_id, date, sport, duration_min, distance_km, notes, shoe_id, watch_id, route, metrics, series, laps)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
             userId,
             a.date,
@@ -148,6 +151,7 @@ export async function insertActivity(
             a.route,
             a.metrics,
             a.series,
+            a.laps,
         ],
     );
     return Number(r.lastInsertRowid);
