@@ -6,6 +6,12 @@ import { Header } from '@/components/header/header';
 export const metadata: Metadata = {
     title: 'tracker',
     description: 'personal fitness log',
+    icons: { apple: '/apple-touch-icon.png' },
+    openGraph: {
+        title: 'Tracker - Frisson Supply',
+        description: 'personal fitness log',
+        images: ['/og-image.png'],
+    },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
