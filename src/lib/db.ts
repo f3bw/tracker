@@ -96,9 +96,16 @@ async function run(sql: string, args: InArgs = []) {
     return client.execute({ sql, args });
 }
 
+// libsql Row objects aren't plain — React can't pass them to client components
+async function all<T>(sql: string, args: InArgs = []): Promise<T[]> {
+    const r = await run(sql, args);
+    return r.rows.map(
+        (row) => Object.fromEntries(r.columns.map((c, i) => [c, row[i]])) as T,
+    );
+}
+
 export async function getUserByUsername(username: string): Promise<User | undefined> {
-    const r = await run('SELECT * FROM users WHERE username = ?', [username]);
-    return r.rows[0] as unknown as User | undefined;
+    return (await all<User>('SELECT * FROM users WHERE username = ?', [username]))[0];
 }
 
 export async function insertUser(username: string, password_hash: string): Promise<number> {
@@ -110,7 +117,7 @@ export async function insertUser(username: string, password_hash: string): Promi
 }
 
 export async function listActivities(userId: number): Promise<Activity[]> {
-    const r = await run(
+    return all<Activity>(
         `SELECT a.*, s.name AS shoe_name, w.name AS watch_name FROM activities a
          LEFT JOIN shoes s ON s.id = a.shoe_id
          LEFT JOIN shoes w ON w.id = a.watch_id
@@ -118,18 +125,17 @@ export async function listActivities(userId: number): Promise<Activity[]> {
          ORDER BY a.date DESC, a.id DESC`,
         [userId],
     );
-    return r.rows as unknown as Activity[];
 }
 
 export async function getActivity(id: number, userId: number): Promise<Activity | undefined> {
-    const r = await run(
+    const rows = await all<Activity>(
         `SELECT a.*, s.name AS shoe_name, w.name AS watch_name FROM activities a
          LEFT JOIN shoes s ON s.id = a.shoe_id
          LEFT JOIN shoes w ON w.id = a.watch_id
          WHERE a.id = ? AND a.user_id = ?`,
         [id, userId],
     );
-    return r.rows[0] as unknown as Activity | undefined;
+    return rows[0];
 }
 
 export async function insertActivity(
@@ -176,7 +182,7 @@ export async function deleteActivity(id: number, userId: number) {
 }
 
 export async function listGear(userId: number): Promise<Gear[]> {
-    const r = await run(
+    return all<Gear>(
         `SELECT g.*, COALESCE(SUM(a.distance_km), 0) AS total_km,
                 COALESCE(SUM(a.duration_min), 0) AS total_min,
                 COUNT(a.id) AS activity_count
@@ -186,7 +192,6 @@ export async function listGear(userId: number): Promise<Gear[]> {
          GROUP BY g.id ORDER BY g.kind, g.name`,
         [userId],
     );
-    return r.rows as unknown as Gear[];
 }
 
 export async function insertGear(
@@ -221,21 +226,19 @@ export type SportTotal = { sport: Sport; count: number; km: number; min: number 
 export type MonthTotal = { month: string; count: number; km: number; min: number };
 
 export async function sportTotals(userId: number): Promise<SportTotal[]> {
-    const r = await run(
+    return all<SportTotal>(
         `SELECT sport, COUNT(*) AS count, COALESCE(SUM(distance_km), 0) AS km,
                 SUM(duration_min) AS min
          FROM activities WHERE user_id = ? GROUP BY sport ORDER BY count DESC`,
         [userId],
     );
-    return r.rows as unknown as SportTotal[];
 }
 
 export async function monthTotals(userId: number): Promise<MonthTotal[]> {
-    const r = await run(
+    return all<MonthTotal>(
         `SELECT strftime('%Y-%m', date) AS month, COUNT(*) AS count,
                 COALESCE(SUM(distance_km), 0) AS km, SUM(duration_min) AS min
          FROM activities WHERE user_id = ? GROUP BY month ORDER BY month DESC`,
         [userId],
     );
-    return r.rows as unknown as MonthTotal[];
 }
