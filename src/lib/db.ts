@@ -75,6 +75,10 @@ const ready = (async () => {
                 series TEXT,
                 laps TEXT
             )`,
+            `CREATE TABLE IF NOT EXISTS fits (
+                activity_id INTEGER PRIMARY KEY REFERENCES activities(id),
+                data BLOB NOT NULL
+            )`,
         ],
         'write',
     );
@@ -178,7 +182,29 @@ export async function updateActivityGear(
 }
 
 export async function deleteActivity(id: number, userId: number) {
+    await run(
+        'DELETE FROM fits WHERE activity_id IN (SELECT id FROM activities WHERE id = ? AND user_id = ?)',
+        [id, userId],
+    );
     await run('DELETE FROM activities WHERE id = ? AND user_id = ?', [id, userId]);
+}
+
+export async function insertFit(activityId: number, data: Uint8Array) {
+    await run('INSERT OR REPLACE INTO fits (activity_id, data) VALUES (?, ?)', [activityId, data]);
+}
+
+export async function getFit(activityId: number, userId: number): Promise<ArrayBuffer | undefined> {
+    const r = await run(
+        `SELECT f.data FROM fits f JOIN activities a ON a.id = f.activity_id
+         WHERE f.activity_id = ? AND a.user_id = ?`,
+        [activityId, userId],
+    );
+    return r.rows[0]?.[0] as ArrayBuffer | undefined;
+}
+
+export async function hasFit(activityId: number): Promise<boolean> {
+    const r = await run('SELECT 1 FROM fits WHERE activity_id = ?', [activityId]);
+    return r.rows.length > 0;
 }
 
 export async function listGear(userId: number): Promise<Gear[]> {

@@ -36,6 +36,7 @@ export type ParsedFit = {
     metrics: Metrics | null;
     series: Series | null;
     laps: Lap[] | null;
+    fit_b64?: string;
 };
 
 // fit-file-parser already converts semicircles to degrees (formatByType, sint32)

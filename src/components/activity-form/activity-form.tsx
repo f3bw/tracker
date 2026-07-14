@@ -91,6 +91,7 @@ export function ActivityForm({ gear, prefill }: { gear: GearOption[]; prefill?: 
             {prefill?.laps && (
                 <input type="hidden" name="laps" value={JSON.stringify(prefill.laps)} />
             )}
+            {prefill?.fit_b64 && <input type="hidden" name="fit_b64" value={prefill.fit_b64} />}
             <button type="submit" className={styles.submit}>
                 save
             </button>

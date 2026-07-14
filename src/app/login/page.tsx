@@ -21,7 +21,13 @@ export default async function Login({
                     password
                     <input type="password" name="password" required />
                 </label>
-                {error && <p className={styles.error}>wrong username or password</p>}
+                {error && (
+                    <p className={styles.error}>
+                        {error === 'locked'
+                            ? 'too many attempts — try again in a minute'
+                            : 'wrong username or password'}
+                    </p>
+                )}
                 <button type="submit" className={styles.submit}>
                     log in
                 </button>

@@ -13,6 +13,12 @@
         color: var(--color-muted-foreground);
     }
 
+    .export {
+        color: var(--color-muted-foreground);
+        font-size: var(--font-size-sm);
+        margin-top: var(--space-2xl);
+    }
+
     .table {
         border-collapse: collapse;
         width: 100%;

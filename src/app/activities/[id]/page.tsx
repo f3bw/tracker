@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { changeGear, removeActivity } from '@/lib/actions';
-import { getActivity, listGear } from '@/lib/db';
+import { getActivity, hasFit, listGear } from '@/lib/db';
 import { currentUserId } from '@/lib/current-user';
 import { RouteSvg } from '@/components/route-svg/route-svg';
 import { Sparkline } from '@/components/sparkline/sparkline';
@@ -21,6 +21,7 @@ export default async function ActivityDetail({ params }: { params: Promise<{ id:
     const metrics: Metrics = activity.metrics ? JSON.parse(activity.metrics) : {};
     const series: Series = activity.series ? JSON.parse(activity.series) : {};
     const laps: Lap[] = activity.laps ? JSON.parse(activity.laps) : [];
+    const fitAvailable = await hasFit(activity.id);
     const pace =
         activity.distance_km && activity.duration_min
             ? activity.duration_min / activity.distance_km
@@ -121,6 +122,11 @@ export default async function ActivityDetail({ params }: { params: Promise<{ id:
                         </form>
                     </details>
                     {activity.notes && <p className={styles.notes}>{activity.notes}</p>}
+                    {fitAvailable && (
+                        <p className={styles['fit-download']}>
+                            <a href={`/activities/${activity.id}/fit`}>download original fit file</a>
+                        </p>
+                    )}
                     <form action={removeActivity} className={styles.delete}>
                         <input type="hidden" name="id" value={activity.id} />
                         <button type="submit">delete</button>

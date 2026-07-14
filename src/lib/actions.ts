@@ -15,9 +15,18 @@ function num(form: FormData, key: string): number | null {
     return v === null || v === '' ? null : Number(v);
 }
 
+// ponytail: in-memory rate limit, per server instance — plenty for a handful of
+// users; move failures to the db if instances ever multiply enough to matter
+const loginFailures: number[] = [];
+
 export async function login(form: FormData) {
+    const now = Date.now();
+    while (loginFailures.length && now - loginFailures[0] > 60_000) loginFailures.shift();
+    if (loginFailures.length >= 5) redirect('/login?error=locked');
+
     const user = await db.getUserByUsername(String(form.get('username') ?? '').trim());
     if (!user || !verifyPassword(String(form.get('password') ?? ''), user.password_hash)) {
+        loginFailures.push(now);
         redirect('/login?error=1');
     }
     (await cookies()).set(SESSION_COOKIE, await signSession(user.id), {
@@ -50,6 +59,8 @@ export async function saveActivity(form: FormData) {
         series: String(form.get('series') ?? '') || null,
         laps: String(form.get('laps') ?? '') || null,
     });
+    const fitB64 = String(form.get('fit_b64') ?? '');
+    if (fitB64) await db.insertFit(id, Buffer.from(fitB64, 'base64'));
     revalidatePath('/');
     redirect(`/activities/${id}`);
 }
@@ -86,7 +97,11 @@ export async function parseFitFile(
     const file = form.get('fit');
     if (!(file instanceof File) || file.size === 0) return { error: 'no file' };
     try {
-        return { parsed: await parseFit(Buffer.from(await file.arrayBuffer())) };
+        const buf = Buffer.from(await file.arrayBuffer());
+        const parsed = await parseFit(buf);
+        // original file rides along so saving keeps a lossless copy
+        parsed.fit_b64 = buf.toString('base64');
+        return { parsed };
     } catch (e) {
         return { error: `could not parse fit file: ${e instanceof Error ? e.message : e}` };
     }

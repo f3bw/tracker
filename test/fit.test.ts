@@ -135,8 +135,15 @@ test('db activity round-trip, shoe totals, and per-user isolation', async () => 
             laps: null,
         }),
     );
+    // fit blob: round-trip, owner-only, gone after activity delete
+    const fitBytes = new Uint8Array([0x0e, 0x10, 0x43, 0x00]);
+    await db.insertFit(id, fitBytes);
+    assert.ok(await db.hasFit(id));
+    assert.deepEqual(new Uint8Array((await db.getFit(id, userId))!), fitBytes);
+    assert.equal(await db.getFit(id, otherId), undefined);
     await db.deleteActivity(id, userId);
     assert.equal((await db.listActivities(userId)).length, 0);
+    assert.equal(await db.hasFit(id), false);
 });
 
 test('session sign/verify round-trip, rejects tampering', async () => {

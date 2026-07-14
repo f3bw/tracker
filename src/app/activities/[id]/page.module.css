@@ -108,6 +108,19 @@
         text-align: left;
     }
 
+    .fit-download {
+        font-size: var(--font-size-sm);
+        margin-top: var(--space-xl);
+    }
+
+    .fit-download a {
+        color: var(--color-muted-foreground);
+    }
+
+    .fit-download a:hover {
+        color: var(--color-foreground);
+    }
+
     .delete {
         margin-top: var(--space-2xl);
     }

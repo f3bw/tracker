@@ -66,6 +66,10 @@ export default async function Stats() {
                     ))}
                 </tbody>
             </table>
+
+            <p className={styles.export}>
+                <a href="/export">export all data (json)</a> — your workouts, portable, any time.
+            </p>
         </>
     );
 }
