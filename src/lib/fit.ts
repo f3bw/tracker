@@ -9,8 +9,9 @@ export type ParsedFit = {
     route: [number, number][] | null;
 };
 
-export function semicirclesToDegrees(semi: number): number {
-    return Math.round(semi * (180 / 2 ** 31) * 1e5) / 1e5;
+// fit-file-parser already converts semicircles to degrees (formatByType, sint32)
+function round5(deg: number): number {
+    return Math.round(deg * 1e5) / 1e5;
 }
 
 export function downsample<T>(points: T[], max = 500): T[] {
@@ -46,10 +47,7 @@ export async function parseFit(buffer: Buffer<ArrayBuffer>): Promise<ParsedFit> 
 
     const points: [number, number][] = (data.records ?? [])
         .filter((r: any) => r.position_lat != null && r.position_long != null)
-        .map((r: any): [number, number] => [
-            semicirclesToDegrees(r.position_lat),
-            semicirclesToDegrees(r.position_long),
-        ]);
+        .map((r: any): [number, number] => [round5(r.position_lat), round5(r.position_long)]);
 
     return {
         date: (start ?? new Date()).toISOString().slice(0, 10),

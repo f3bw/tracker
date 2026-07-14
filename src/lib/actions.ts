@@ -44,9 +44,22 @@ export async function saveActivity(form: FormData) {
         distance_km: num(form, 'distance_km'),
         notes: String(form.get('notes') ?? '') || null,
         shoe_id: num(form, 'shoe_id'),
+        watch_id: num(form, 'watch_id'),
         route: String(form.get('route') ?? '') || null,
     });
     revalidatePath('/');
+    redirect(`/activities/${id}`);
+}
+
+export async function changeGear(form: FormData) {
+    const id = Number(form.get('id'));
+    await db.updateActivityGear(
+        id,
+        await currentUserId(),
+        num(form, 'shoe_id'),
+        num(form, 'watch_id'),
+    );
+    revalidatePath(`/activities/${id}`);
     redirect(`/activities/${id}`);
 }
 
@@ -56,10 +69,11 @@ export async function removeActivity(form: FormData) {
     redirect('/');
 }
 
-export async function addShoe(form: FormData) {
+export async function addGear(form: FormData) {
     const name = String(form.get('name') ?? '').trim();
-    if (name) await db.insertShoe(await currentUserId(), name, num(form, 'threshold_km'));
-    revalidatePath('/shoes');
+    const kind = form.get('kind') === 'watch' ? 'watch' : 'shoe';
+    if (name) await db.insertGear(await currentUserId(), kind, name, num(form, 'threshold_km'));
+    revalidatePath('/gear');
 }
 
 export async function parseFitFile(
@@ -75,7 +89,7 @@ export async function parseFitFile(
     }
 }
 
-export async function removeShoe(form: FormData) {
-    await db.deleteShoe(Number(form.get('id')), await currentUserId());
-    revalidatePath('/shoes');
+export async function removeGear(form: FormData) {
+    await db.deleteGear(Number(form.get('id')), await currentUserId());
+    revalidatePath('/gear');
 }

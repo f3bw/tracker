@@ -9,11 +9,14 @@ export type User = {
     password_hash: string;
 };
 
-export type Shoe = {
+export type Gear = {
     id: number;
+    kind: 'shoe' | 'watch';
     name: string;
     threshold_km: number | null;
     total_km: number;
+    total_min: number;
+    activity_count: number;
 };
 
 export type Activity = {
@@ -25,6 +28,8 @@ export type Activity = {
     notes: string | null;
     shoe_id: number | null;
     shoe_name?: string | null;
+    watch_id: number | null;
+    watch_name?: string | null;
     route: string | null;
 };
 
@@ -33,33 +38,46 @@ const client = createClient({
     authToken: process.env.TURSO_AUTH_TOKEN,
 });
 
-const ready = client.batch(
-    [
-        `CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY,
-            username TEXT NOT NULL UNIQUE,
-            password_hash TEXT NOT NULL
-        )`,
-        `CREATE TABLE IF NOT EXISTS shoes (
-            id INTEGER PRIMARY KEY,
-            user_id INTEGER NOT NULL REFERENCES users(id),
-            name TEXT NOT NULL,
-            threshold_km REAL
-        )`,
-        `CREATE TABLE IF NOT EXISTS activities (
-            id INTEGER PRIMARY KEY,
-            user_id INTEGER NOT NULL REFERENCES users(id),
-            date TEXT NOT NULL,
-            sport TEXT NOT NULL CHECK (sport IN ('run','walk','ride','swim','strength','hiit','yoga')),
-            duration_min REAL NOT NULL,
-            distance_km REAL,
-            notes TEXT,
-            shoe_id INTEGER REFERENCES shoes(id) ON DELETE SET NULL,
-            route TEXT
-        )`,
-    ],
-    'write',
-);
+// ponytail: the gear table keeps its historical "shoes" name — a rename isn't
+// worth a manual migration on the live db; `kind` distinguishes shoes/watches
+const ready = (async () => {
+    await client.batch(
+        [
+            `CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY,
+                username TEXT NOT NULL UNIQUE,
+                password_hash TEXT NOT NULL
+            )`,
+            `CREATE TABLE IF NOT EXISTS shoes (
+                id INTEGER PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id),
+                name TEXT NOT NULL,
+                threshold_km REAL,
+                kind TEXT NOT NULL DEFAULT 'shoe' CHECK (kind IN ('shoe','watch'))
+            )`,
+            `CREATE TABLE IF NOT EXISTS activities (
+                id INTEGER PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id),
+                date TEXT NOT NULL,
+                sport TEXT NOT NULL CHECK (sport IN ('run','walk','ride','swim','strength','hiit','yoga')),
+                duration_min REAL NOT NULL,
+                distance_km REAL,
+                notes TEXT,
+                shoe_id INTEGER REFERENCES shoes(id) ON DELETE SET NULL,
+                watch_id INTEGER REFERENCES shoes(id) ON DELETE SET NULL,
+                route TEXT
+            )`,
+        ],
+        'write',
+    );
+    // additive migrations for dbs created before these columns existed
+    for (const sql of [
+        `ALTER TABLE shoes ADD COLUMN kind TEXT NOT NULL DEFAULT 'shoe'`,
+        `ALTER TABLE activities ADD COLUMN watch_id INTEGER REFERENCES shoes(id)`,
+    ]) {
+        await client.execute(sql).catch(() => {}); // duplicate column = already migrated
+    }
+})();
 
 async function run(sql: string, args: InArgs = []) {
     await ready;
@@ -81,8 +99,9 @@ export async function insertUser(username: string, password_hash: string): Promi
 
 export async function listActivities(userId: number): Promise<Activity[]> {
     const r = await run(
-        `SELECT a.*, s.name AS shoe_name FROM activities a
+        `SELECT a.*, s.name AS shoe_name, w.name AS watch_name FROM activities a
          LEFT JOIN shoes s ON s.id = a.shoe_id
+         LEFT JOIN shoes w ON w.id = a.watch_id
          WHERE a.user_id = ?
          ORDER BY a.date DESC, a.id DESC`,
         [userId],
@@ -92,8 +111,9 @@ export async function listActivities(userId: number): Promise<Activity[]> {
 
 export async function getActivity(id: number, userId: number): Promise<Activity | undefined> {
     const r = await run(
-        `SELECT a.*, s.name AS shoe_name FROM activities a
+        `SELECT a.*, s.name AS shoe_name, w.name AS watch_name FROM activities a
          LEFT JOIN shoes s ON s.id = a.shoe_id
+         LEFT JOIN shoes w ON w.id = a.watch_id
          WHERE a.id = ? AND a.user_id = ?`,
         [id, userId],
     );
@@ -102,40 +122,73 @@ export async function getActivity(id: number, userId: number): Promise<Activity 
 
 export async function insertActivity(
     userId: number,
-    a: Omit<Activity, 'id' | 'shoe_name'>,
+    a: Omit<Activity, 'id' | 'shoe_name' | 'watch_name'>,
 ): Promise<number> {
     const r = await run(
-        `INSERT INTO activities (user_id, date, sport, duration_min, distance_km, notes, shoe_id, route)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [userId, a.date, a.sport, a.duration_min, a.distance_km, a.notes, a.shoe_id, a.route],
+        `INSERT INTO activities (user_id, date, sport, duration_min, distance_km, notes, shoe_id, watch_id, route)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+            userId,
+            a.date,
+            a.sport,
+            a.duration_min,
+            a.distance_km,
+            a.notes,
+            a.shoe_id,
+            a.watch_id,
+            a.route,
+        ],
     );
     return Number(r.lastInsertRowid);
+}
+
+export async function updateActivityGear(
+    id: number,
+    userId: number,
+    shoeId: number | null,
+    watchId: number | null,
+) {
+    await run('UPDATE activities SET shoe_id = ?, watch_id = ? WHERE id = ? AND user_id = ?', [
+        shoeId,
+        watchId,
+        id,
+        userId,
+    ]);
 }
 
 export async function deleteActivity(id: number, userId: number) {
     await run('DELETE FROM activities WHERE id = ? AND user_id = ?', [id, userId]);
 }
 
-export async function listShoes(userId: number): Promise<Shoe[]> {
+export async function listGear(userId: number): Promise<Gear[]> {
     const r = await run(
-        `SELECT s.*, COALESCE(SUM(a.distance_km), 0) AS total_km
-         FROM shoes s LEFT JOIN activities a ON a.shoe_id = s.id
-         WHERE s.user_id = ?
-         GROUP BY s.id ORDER BY s.name`,
+        `SELECT g.*, COALESCE(SUM(a.distance_km), 0) AS total_km,
+                COALESCE(SUM(a.duration_min), 0) AS total_min,
+                COUNT(a.id) AS activity_count
+         FROM shoes g LEFT JOIN activities a
+             ON (g.kind = 'shoe' AND a.shoe_id = g.id) OR (g.kind = 'watch' AND a.watch_id = g.id)
+         WHERE g.user_id = ?
+         GROUP BY g.id ORDER BY g.kind, g.name`,
         [userId],
     );
-    return r.rows as unknown as Shoe[];
+    return r.rows as unknown as Gear[];
 }
 
-export async function insertShoe(userId: number, name: string, threshold_km: number | null) {
-    await run('INSERT INTO shoes (user_id, name, threshold_km) VALUES (?, ?, ?)', [
+export async function insertGear(
+    userId: number,
+    kind: Gear['kind'],
+    name: string,
+    threshold_km: number | null,
+) {
+    await run('INSERT INTO shoes (user_id, kind, name, threshold_km) VALUES (?, ?, ?, ?)', [
         userId,
+        kind,
         name,
         threshold_km,
     ]);
 }
 
-export async function deleteShoe(id: number, userId: number) {
+export async function deleteGear(id: number, userId: number) {
     await run('DELETE FROM shoes WHERE id = ? AND user_id = ?', [id, userId]);
 }
 

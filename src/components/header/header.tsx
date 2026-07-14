@@ -16,7 +16,7 @@ export async function Header() {
                 <nav className={styles.nav}>
                     <Link href="/activities/new">log</Link>
                     <Link href="/upload">upload</Link>
-                    <Link href="/shoes">shoes</Link>
+                    <Link href="/gear">gear</Link>
                     <Link href="/stats">stats</Link>
                     <form action={logout}>
                         <button type="submit" className={styles.logout}>

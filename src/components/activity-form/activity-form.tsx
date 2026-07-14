@@ -4,13 +4,11 @@ import styles from './activity-form.module.css';
 
 const SPORTS = ['run', 'walk', 'ride', 'swim', 'strength', 'hiit', 'yoga'];
 
-export function ActivityForm({
-    shoes,
-    prefill,
-}: {
-    shoes: { id: number; name: string }[];
-    prefill?: ParsedFit;
-}) {
+export type GearOption = { id: number; name: string; kind: 'shoe' | 'watch' };
+
+export function ActivityForm({ gear, prefill }: { gear: GearOption[]; prefill?: ParsedFit }) {
+    const shoes = gear.filter((g) => g.kind === 'shoe');
+    const watches = gear.filter((g) => g.kind === 'watch');
     return (
         <form action={saveActivity} className={styles.form}>
             <label className={styles.field}>
@@ -60,6 +58,17 @@ export function ActivityForm({
                     {shoes.map((s) => (
                         <option key={s.id} value={s.id}>
                             {s.name}
+                        </option>
+                    ))}
+                </select>
+            </label>
+            <label className={styles.field}>
+                watch
+                <select name="watch_id" defaultValue="">
+                    <option value="">—</option>
+                    {watches.map((w) => (
+                        <option key={w.id} value={w.id}>
+                            {w.name}
                         </option>
                     ))}
                 </select>

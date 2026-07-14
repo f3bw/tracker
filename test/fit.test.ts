@@ -5,15 +5,6 @@ import path from 'node:path';
 
 process.env.TURSO_DATABASE_URL = `file:${path.join(os.tmpdir(), `tracker-test-${process.pid}.db`)}`;
 
-test('semicircles to degrees', async () => {
-    const { semicirclesToDegrees } = await import('../src/lib/fit.ts');
-    assert.equal(semicirclesToDegrees(2 ** 31), 180);
-    assert.equal(semicirclesToDegrees(0), 0);
-    // 624880556 semicircles ≈ 52.37688° (Amsterdam)
-    assert.equal(semicirclesToDegrees(624880556), 52.37688);
-    assert.equal(semicirclesToDegrees(-624880556), -52.37688);
-});
-
 test('downsample caps length and keeps endpoints region', async () => {
     const { downsample } = await import('../src/lib/fit.ts');
     const big = Array.from({ length: 5000 }, (_, i) => i);
@@ -31,8 +22,11 @@ test('db activity round-trip, shoe totals, and per-user isolation', async () => 
     assert.ok(!verifyPassword('wrong', hash));
     const userId = await db.insertUser('me', hash);
     const otherId = await db.insertUser('partner', hashPassword('pw2'));
-    await db.insertShoe(userId, 'test shoe', 500);
-    const shoe = (await db.listShoes(userId))[0];
+    await db.insertGear(userId, 'shoe', 'test shoe', 500);
+    await db.insertGear(userId, 'watch', 'test watch', null);
+    const [shoe, watch] = await db.listGear(userId);
+    assert.equal(shoe.kind, 'shoe');
+    assert.equal(watch.kind, 'watch');
     const id = await db.insertActivity(userId, {
         date: '2026-07-13',
         sport: 'run',
@@ -40,15 +34,26 @@ test('db activity round-trip, shoe totals, and per-user isolation', async () => 
         distance_km: 8.5,
         notes: 'hello',
         shoe_id: shoe.id,
+        watch_id: watch.id,
         route: JSON.stringify([[52.37, 4.89]]),
     });
     const a = await db.getActivity(id, userId);
     assert.equal(a?.distance_km, 8.5);
     assert.equal(a?.shoe_name, 'test shoe');
-    assert.equal((await db.listShoes(userId))[0].total_km, 8.5);
+    assert.equal(a?.watch_name, 'test watch');
+    const gear = await db.listGear(userId);
+    assert.equal(gear[0].total_km, 8.5);
+    assert.equal(gear[1].total_min, 42);
+    await db.updateActivityGear(id, userId, null, null);
+    assert.equal((await db.getActivity(id, userId))?.shoe_name, null);
+    await db.updateActivityGear(id, userId, shoe.id, watch.id);
+    assert.equal((await db.getActivity(id, userId))?.shoe_name, 'test shoe');
     assert.equal((await db.listActivities(otherId)).length, 0);
     assert.equal(await db.getActivity(id, otherId), undefined);
-    assert.equal((await db.listShoes(otherId)).length, 0);
+    assert.equal((await db.listGear(otherId)).length, 0);
+    // cross-user gear update must be a no-op
+    await db.updateActivityGear(id, otherId, null, null);
+    assert.equal((await db.getActivity(id, userId))?.shoe_name, 'test shoe');
     await assert.rejects(
         db.insertActivity(userId, {
             date: '2026-07-13',
@@ -57,6 +62,7 @@ test('db activity round-trip, shoe totals, and per-user isolation', async () => 
             distance_km: null,
             notes: null,
             shoe_id: null,
+            watch_id: null,
             route: null,
         }),
     );
