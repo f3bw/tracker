@@ -30,4 +30,18 @@
         color: var(--color-foreground);
         text-decoration: underline;
     }
+
+    .logout {
+        background: none;
+        border: none;
+        color: var(--color-muted-foreground);
+        cursor: pointer;
+        font: inherit;
+        padding: 0;
+    }
+
+    .logout:hover {
+        color: var(--color-foreground);
+        text-decoration: underline;
+    }
 }

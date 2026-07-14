@@ -1,11 +1,12 @@
 import { addShoe, removeShoe } from '@/lib/actions';
 import { listShoes } from '@/lib/db';
+import { currentUserId } from '@/lib/current-user';
 import styles from './page.module.css';
 
 export const dynamic = 'force-dynamic';
 
 export default async function Shoes() {
-    const shoes = await listShoes();
+    const shoes = await listShoes(await currentUserId());
     return (
         <>
             <h1 className={styles.heading}>shoes</h1>

@@ -1,11 +1,12 @@
 import Link from 'next/link';
 import { listActivities } from '@/lib/db';
+import { currentUserId } from '@/lib/current-user';
 import styles from './page.module.css';
 
 export const dynamic = 'force-dynamic';
 
 export default async function Home() {
-    const activities = await listActivities();
+    const activities = await listActivities(await currentUserId());
     return (
         <>
             <h1 className={styles.heading}>activities</h1>

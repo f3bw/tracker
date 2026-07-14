@@ -1,4 +1,5 @@
 import { monthTotals, sportTotals } from '@/lib/db';
+import { currentUserId } from '@/lib/current-user';
 import styles from './page.module.css';
 
 export const dynamic = 'force-dynamic';
@@ -6,8 +7,9 @@ export const dynamic = 'force-dynamic';
 const fmt = (n: number) => Math.round(n * 10) / 10;
 
 export default async function Stats() {
-    const bySport = await sportTotals();
-    const byMonth = await monthTotals();
+    const userId = await currentUserId();
+    const bySport = await sportTotals(userId);
+    const byMonth = await monthTotals(userId);
     const total = {
         count: bySport.reduce((s, r) => s + r.count, 0),
         km: bySport.reduce((s, r) => s + r.km, 0),

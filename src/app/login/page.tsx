@@ -14,10 +14,14 @@ export default async function Login({
             <h1 className={styles.heading}>log in</h1>
             <form action={login} className={styles.form}>
                 <label className={styles.field}>
-                    password
-                    <input type="password" name="password" required autoFocus />
+                    username
+                    <input type="text" name="username" required autoFocus autoCapitalize="none" />
                 </label>
-                {error && <p className={styles.error}>wrong password</p>}
+                <label className={styles.field}>
+                    password
+                    <input type="password" name="password" required />
+                </label>
+                {error && <p className={styles.error}>wrong username or password</p>}
                 <button type="submit" className={styles.submit}>
                     log in
                 </button>

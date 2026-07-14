@@ -6,7 +6,9 @@ import { cookies } from 'next/headers';
 import * as db from './db';
 import type { Sport } from './db';
 import { parseFit, type ParsedFit } from './fit';
-import { SESSION_COOKIE, sessionToken } from './auth';
+import { SESSION_COOKIE, signSession } from './auth';
+import { currentUserId } from './current-user';
+import { verifyPassword } from './password';
 
 function num(form: FormData, key: string): number | null {
     const v = form.get(key);
@@ -14,8 +16,11 @@ function num(form: FormData, key: string): number | null {
 }
 
 export async function login(form: FormData) {
-    if (form.get('password') !== process.env.APP_PASSWORD) redirect('/login?error=1');
-    (await cookies()).set(SESSION_COOKIE, await sessionToken(), {
+    const user = await db.getUserByUsername(String(form.get('username') ?? '').trim());
+    if (!user || !verifyPassword(String(form.get('password') ?? ''), user.password_hash)) {
+        redirect('/login?error=1');
+    }
+    (await cookies()).set(SESSION_COOKIE, await signSession(user.id), {
         httpOnly: true,
         secure: true,
         sameSite: 'lax',
@@ -25,8 +30,14 @@ export async function login(form: FormData) {
     redirect('/');
 }
 
+export async function logout() {
+    (await cookies()).delete(SESSION_COOKIE);
+    redirect('/login');
+}
+
 export async function saveActivity(form: FormData) {
-    const id = await db.insertActivity({
+    const userId = await currentUserId();
+    const id = await db.insertActivity(userId, {
         date: String(form.get('date')),
         sport: String(form.get('sport')) as Sport,
         duration_min: Number(form.get('duration_min')),
@@ -40,14 +51,14 @@ export async function saveActivity(form: FormData) {
 }
 
 export async function removeActivity(form: FormData) {
-    await db.deleteActivity(Number(form.get('id')));
+    await db.deleteActivity(Number(form.get('id')), await currentUserId());
     revalidatePath('/');
     redirect('/');
 }
 
 export async function addShoe(form: FormData) {
     const name = String(form.get('name') ?? '').trim();
-    if (name) await db.insertShoe(name, num(form, 'threshold_km'));
+    if (name) await db.insertShoe(await currentUserId(), name, num(form, 'threshold_km'));
     revalidatePath('/shoes');
 }
 
@@ -65,6 +76,6 @@ export async function parseFitFile(
 }
 
 export async function removeShoe(form: FormData) {
-    await db.deleteShoe(Number(form.get('id')));
+    await db.deleteShoe(Number(form.get('id')), await currentUserId());
     revalidatePath('/shoes');
 }

@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { removeActivity } from '@/lib/actions';
 import { getActivity } from '@/lib/db';
+import { currentUserId } from '@/lib/current-user';
 import { RouteSvg } from '@/components/route-svg/route-svg';
 import styles from './page.module.css';
 
@@ -8,7 +9,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function ActivityDetail({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
-    const activity = await getActivity(Number(id));
+    const activity = await getActivity(Number(id), await currentUserId());
     if (!activity) notFound();
 
     return (

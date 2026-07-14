@@ -6,7 +6,8 @@
         "dev": "next dev",
         "build": "next build",
         "start": "next start",
-        "test": "node --experimental-strip-types --test test/*.test.ts"
+        "test": "node --experimental-strip-types --test test/*.test.ts",
+        "add-user": "node --experimental-strip-types --env-file=.env.local scripts/add-user.ts"
     },
     "dependencies": {
         "@libsql/client": "^0.17.4",
