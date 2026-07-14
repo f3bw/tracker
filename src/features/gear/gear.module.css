@@ -14,22 +14,52 @@
     }
 
     .table {
-        border-collapse: collapse;
         margin-bottom: var(--space-xl);
-        width: 100%;
     }
 
-    .table th {
-        color: var(--color-muted-foreground);
-        font-size: var(--font-size-sm);
-        font-weight: var(--font-weight-normal);
-    }
+    /* mobile: two lines per item — name, then wear/count + actions */
+    @media (max-width: 639px) {
+        .table thead {
+            display: none;
+        }
 
-    .table th,
-    .table td {
-        border-bottom: 1px solid var(--color-border);
-        padding: var(--space-sm) var(--space-md) var(--space-sm) 0;
-        text-align: left;
+        .table tbody,
+        .table tr,
+        .table td {
+            display: block;
+        }
+
+        .table tr {
+            border-bottom: 1px solid var(--color-border);
+            display: grid;
+            gap: 0 var(--space-md);
+            grid-template-columns: repeat(2, auto) 1fr auto;
+            padding-block: var(--space-sm);
+        }
+
+        .table td {
+            border: none;
+            padding: 0;
+        }
+
+        .table td:nth-child(1) {
+            grid-area: 1 / 1 / 2 / 5;
+        }
+
+        .table td:nth-child(n + 2) {
+            color: var(--color-muted-foreground);
+            font-size: var(--font-size-sm);
+            grid-row: 2;
+        }
+
+        .table td:nth-child(3)::after {
+            content: ' activities';
+        }
+
+        .table td:nth-child(5) {
+            grid-column: 4;
+            justify-self: end;
+        }
     }
 
     .worn td {
@@ -48,7 +78,13 @@
 
     .add {
         display: flex;
+        flex-wrap: wrap;
         gap: var(--space-sm);
+    }
+
+    .add input {
+        flex: 1 1 8rem;
+        min-width: 0;
     }
 
     .add select,

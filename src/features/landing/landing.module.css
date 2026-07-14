@@ -1,0 +1,22 @@
+@layer pages {
+    .landing {
+        color: var(--color-muted-foreground);
+        line-height: var(--line-height-relaxed);
+        max-width: 36rem;
+        margin-bottom: var(--space-xl);
+    }
+
+    .login-link {
+        background-color: var(--color-foreground);
+        border-radius: var(--radius-sm);
+        color: var(--color-background);
+        display: inline-block;
+        padding: var(--space-sm) var(--space-lg);
+        text-decoration: none;
+    }
+
+    .login-link:hover {
+        background-color: var(--color-muted-foreground);
+        color: var(--color-background);
+    }
+}

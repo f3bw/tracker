@@ -3,7 +3,7 @@
 import { useActionState } from 'react';
 import { parseFitFile } from '@/lib/actions';
 import { ActivityForm, type GearOption } from '@/components/activity-form/activity-form';
-import styles from './page.module.css';
+import styles from './upload.module.css';
 
 export function UploadForm({ gear }: { gear: GearOption[] }) {
     const [state, formAction] = useActionState(parseFitFile, null);

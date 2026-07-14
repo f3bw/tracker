@@ -7,8 +7,14 @@
     .upload {
         align-items: center;
         display: flex;
+        flex-wrap: wrap;
         gap: var(--space-md);
         margin-bottom: var(--space-xl);
+    }
+
+    .upload input[type='file'] {
+        max-width: 100%;
+        min-width: 0;
     }
 
     .upload button {
@@ -36,10 +42,6 @@
         color: var(--color-muted-foreground);
         font-size: var(--font-size-sm);
         margin-top: var(--space-2xl);
-    }
-
-    .howto summary {
-        cursor: pointer;
     }
 
     .howto ol {

@@ -78,6 +78,11 @@ html {
         color: inherit;
     }
 
+    /* default hover for content links; component/page layers override where needed */
+    a:hover {
+        color: var(--color-muted-foreground);
+    }
+
     a:focus-visible,
     button:focus-visible,
     input:focus-visible,
@@ -90,6 +95,25 @@ html {
     img {
         display: block;
         max-width: 100%;
+    }
+
+    /* every table in the app is a data table; deltas live in feature css */
+    table {
+        border-collapse: collapse;
+        width: 100%;
+    }
+
+    th {
+        color: var(--color-muted-foreground);
+        font-size: var(--font-size-sm);
+        font-weight: var(--font-weight-normal);
+    }
+
+    th,
+    td {
+        border-bottom: 1px solid var(--color-border);
+        padding: var(--space-sm) var(--space-md) var(--space-sm) 0;
+        text-align: left;
     }
 
     @media (prefers-reduced-motion: reduce) {

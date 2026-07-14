@@ -1,0 +1,13 @@
+@layer components {
+    .disclosure summary {
+        color: var(--color-muted-foreground);
+        cursor: pointer;
+        font-size: var(--font-size-sm);
+    }
+
+    .disclosure summary:hover,
+    .disclosure[open] summary {
+        color: var(--color-foreground);
+        text-decoration: underline;
+    }
+}
