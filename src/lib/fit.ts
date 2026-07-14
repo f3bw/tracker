@@ -1,12 +1,29 @@
 import FitParser from 'fit-file-parser';
 import type { Sport } from './db';
 
+export type Metrics = {
+    ascent_m?: number;
+    calories?: number;
+    avg_hr?: number;
+    max_hr?: number;
+    avg_cadence?: number;
+};
+
+export type Series = {
+    alt?: number[];
+    hr?: number[];
+    pace?: number[];
+    cad?: number[];
+};
+
 export type ParsedFit = {
     date: string;
     sport: Sport;
     duration_min: number;
     distance_km: number | null;
     route: [number, number][] | null;
+    metrics: Metrics | null;
+    series: Series | null;
 };
 
 // fit-file-parser already converts semicircles to degrees (formatByType, sint32)
@@ -19,6 +36,54 @@ export function downsample<T>(points: T[], max = 500): T[] {
     const step = points.length / max;
     // ponytail: even-index sampling, good enough for a route silhouette
     return Array.from({ length: max }, (_, i) => points[Math.floor(i * step)]);
+}
+
+const round1 = (n: number) => Math.round(n * 10) / 10;
+
+// ponytail: Garmin reports run/walk cadence per leg — double it so it reads as
+// steps/min like every running app; other sports (ride rpm) stay raw
+const cadenceFactor = (sport: Sport) => (sport === 'run' || sport === 'walk' ? 2 : 1);
+
+export function extractMetrics(
+    session: any,
+    records: any[],
+    sport: Sport,
+): { metrics: Metrics | null; series: Series | null } {
+    const metrics: Metrics = {};
+    // lengthUnit 'km' converts altitude/ascent too — back to meters
+    if (session.total_ascent != null) metrics.ascent_m = Math.round(session.total_ascent * 1000);
+    if (session.total_calories != null) metrics.calories = Math.round(session.total_calories);
+    if (session.avg_heart_rate != null) metrics.avg_hr = Math.round(session.avg_heart_rate);
+    if (session.max_heart_rate != null) metrics.max_hr = Math.round(session.max_heart_rate);
+    if (session.avg_cadence != null) {
+        metrics.avg_cadence = Math.round(session.avg_cadence * cadenceFactor(sport));
+    }
+
+    const series: Series = {};
+    const collect = (pick: (r: any) => number | null | undefined): number[] =>
+        downsample(
+            records.map(pick).filter((v): v is number => v != null && Number.isFinite(v)),
+            200,
+        ).map(round1);
+    const alt = collect((r) => {
+        const a = r.enhanced_altitude ?? r.altitude;
+        return a != null ? a * 1000 : null;
+    });
+    const hr = collect((r) => r.heart_rate);
+    const pace = collect((r) => {
+        const speed = r.enhanced_speed ?? r.speed; // m/s
+        return speed > 0.5 ? 1000 / speed / 60 : null; // min/km, skip standing still
+    });
+    const cad = collect((r) => (r.cadence != null ? r.cadence * cadenceFactor(sport) : null));
+    if (alt.length > 1) series.alt = alt;
+    if (hr.length > 1) series.hr = hr;
+    if (pace.length > 1) series.pace = pace;
+    if (cad.length > 1) series.cad = cad;
+
+    return {
+        metrics: Object.keys(metrics).length ? metrics : null,
+        series: Object.keys(series).length ? series : null,
+    };
 }
 
 const SPORT_MAP: Record<string, Sport> = {
@@ -49,11 +114,13 @@ export async function parseFit(buffer: Buffer<ArrayBuffer>): Promise<ParsedFit> 
         .filter((r: any) => r.position_lat != null && r.position_long != null)
         .map((r: any): [number, number] => [round5(r.position_lat), round5(r.position_long)]);
 
+    const sport = SPORT_MAP[session.sport] ?? 'run';
     return {
         date: (start ?? new Date()).toISOString().slice(0, 10),
-        sport: SPORT_MAP[session.sport] ?? 'run',
+        sport,
         duration_min: Math.round(durationSec / 6) / 10,
         distance_km: session.total_distance ? Math.round(session.total_distance * 100) / 100 : null,
         route: points.length ? downsample(points) : null,
+        ...extractMetrics(session, data.records ?? [], sport),
     };
 }

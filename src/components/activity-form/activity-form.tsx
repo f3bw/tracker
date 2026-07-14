@@ -82,6 +82,12 @@ export function ActivityForm({ gear, prefill }: { gear: GearOption[]; prefill?: 
             {prefill?.route && (
                 <input type="hidden" name="route" value={JSON.stringify(prefill.route)} />
             )}
+            {prefill?.metrics && (
+                <input type="hidden" name="metrics" value={JSON.stringify(prefill.metrics)} />
+            )}
+            {prefill?.series && (
+                <input type="hidden" name="series" value={JSON.stringify(prefill.series)} />
+            )}
             <button type="submit" className={styles.submit}>
                 save
             </button>

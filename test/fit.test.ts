@@ -5,6 +5,39 @@ import path from 'node:path';
 
 process.env.TURSO_DATABASE_URL = `file:${path.join(os.tmpdir(), `tracker-test-${process.pid}.db`)}`;
 
+test('extractMetrics: scalars, pace conversion, run cadence doubling, omissions', async () => {
+    const { extractMetrics } = await import('../src/lib/fit.ts');
+    const session = {
+        total_ascent: 0.123, // km (lengthUnit conversion) -> 123 m
+        total_calories: 456,
+        avg_heart_rate: 150.4,
+        max_heart_rate: 172,
+        avg_cadence: 85, // per leg -> 170 for run
+    };
+    const records = [
+        { enhanced_altitude: 0.01, heart_rate: 140, speed: 3.333, cadence: 84 },
+        { enhanced_altitude: 0.012, heart_rate: 150, speed: 2.777, cadence: 86 },
+        { enhanced_altitude: 0.011, heart_rate: 155, speed: 0.1, cadence: 85 }, // standing still: no pace point
+    ];
+    const { metrics, series } = extractMetrics(session, records, 'run');
+    assert.deepEqual(metrics, {
+        ascent_m: 123,
+        calories: 456,
+        avg_hr: 150,
+        max_hr: 172,
+        avg_cadence: 170,
+    });
+    assert.deepEqual(series?.alt, [10, 12, 11]);
+    assert.deepEqual(series?.hr, [140, 150, 155]);
+    assert.deepEqual(series?.pace, [5, 6]); // 3.333 m/s = 5:00/km, 2.777 = 6:00/km
+    assert.deepEqual(series?.cad, [168, 172, 170]);
+    // ride cadence stays raw; empty input -> nulls
+    const ride = extractMetrics({ avg_cadence: 90 }, [], 'ride');
+    assert.equal(ride.metrics?.avg_cadence, 90);
+    assert.equal(ride.series, null);
+    assert.deepEqual(extractMetrics({}, [], 'run'), { metrics: null, series: null });
+});
+
 test('downsample caps length and keeps endpoints region', async () => {
     const { downsample } = await import('../src/lib/fit.ts');
     const big = Array.from({ length: 5000 }, (_, i) => i);
@@ -36,9 +69,13 @@ test('db activity round-trip, shoe totals, and per-user isolation', async () => 
         shoe_id: shoe.id,
         watch_id: watch.id,
         route: JSON.stringify([[52.37, 4.89]]),
+        metrics: JSON.stringify({ ascent_m: 12 }),
+        series: JSON.stringify({ hr: [140, 150] }),
     });
     const a = await db.getActivity(id, userId);
     assert.equal(a?.distance_km, 8.5);
+    assert.deepEqual(JSON.parse(a!.metrics!), { ascent_m: 12 });
+    assert.deepEqual(JSON.parse(a!.series!), { hr: [140, 150] });
     assert.equal(a?.shoe_name, 'test shoe');
     assert.equal(a?.watch_name, 'test watch');
     const gear = await db.listGear(userId);
@@ -75,6 +112,8 @@ test('db activity round-trip, shoe totals, and per-user isolation', async () => 
             shoe_id: null,
             watch_id: null,
             route: null,
+            metrics: null,
+            series: null,
         }),
     );
     await db.deleteActivity(id, userId);

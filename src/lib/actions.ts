@@ -46,6 +46,8 @@ export async function saveActivity(form: FormData) {
         shoe_id: num(form, 'shoe_id'),
         watch_id: num(form, 'watch_id'),
         route: String(form.get('route') ?? '') || null,
+        metrics: String(form.get('metrics') ?? '') || null,
+        series: String(form.get('series') ?? '') || null,
     });
     revalidatePath('/');
     redirect(`/activities/${id}`);

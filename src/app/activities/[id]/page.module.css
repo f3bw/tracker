@@ -63,6 +63,13 @@
         white-space: pre-wrap;
     }
 
+    .charts {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-md);
+        margin-top: var(--space-xl);
+    }
+
     .delete {
         margin-top: var(--space-2xl);
     }
