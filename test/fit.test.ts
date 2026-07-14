@@ -54,6 +54,17 @@ test('db activity round-trip, shoe totals, and per-user isolation', async () => 
     // cross-user gear update must be a no-op
     await db.updateActivityGear(id, otherId, null, null);
     assert.equal((await db.getActivity(id, userId))?.shoe_name, 'test shoe');
+    // one default per kind
+    await db.insertGear(userId, 'shoe', 'second shoe', null);
+    await db.setDefaultGear(shoe.id, userId);
+    const secondShoe = (await db.listGear(userId)).find((g) => g.name === 'second shoe')!;
+    await db.setDefaultGear(secondShoe.id, userId);
+    await db.setDefaultGear(watch.id, userId);
+    const defaults = (await db.listGear(userId)).filter((g) => g.is_default);
+    assert.deepEqual(defaults.map((g) => g.name).sort(), ['second shoe', 'test watch']);
+    // cross-user default must be a no-op
+    await db.setDefaultGear(secondShoe.id, otherId);
+    assert.ok((await db.listGear(userId)).find((g) => g.name === 'second shoe')!.is_default);
     await assert.rejects(
         db.insertActivity(userId, {
             date: '2026-07-13',

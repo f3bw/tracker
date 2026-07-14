@@ -4,11 +4,13 @@ import styles from './activity-form.module.css';
 
 const SPORTS = ['run', 'walk', 'ride', 'swim', 'strength', 'hiit', 'yoga'];
 
-export type GearOption = { id: number; name: string; kind: 'shoe' | 'watch' };
+export type GearOption = { id: number; name: string; kind: 'shoe' | 'watch'; is_default: number };
 
 export function ActivityForm({ gear, prefill }: { gear: GearOption[]; prefill?: ParsedFit }) {
     const shoes = gear.filter((g) => g.kind === 'shoe');
     const watches = gear.filter((g) => g.kind === 'watch');
+    const defaultShoe = shoes.find((g) => g.is_default)?.id ?? '';
+    const defaultWatch = watches.find((g) => g.is_default)?.id ?? '';
     return (
         <form action={saveActivity} className={styles.form}>
             <label className={styles.field}>
@@ -53,7 +55,7 @@ export function ActivityForm({ gear, prefill }: { gear: GearOption[]; prefill?: 
             </label>
             <label className={styles.field}>
                 shoe (run/walk)
-                <select name="shoe_id" defaultValue="">
+                <select name="shoe_id" defaultValue={defaultShoe}>
                     <option value="">—</option>
                     {shoes.map((s) => (
                         <option key={s.id} value={s.id}>
@@ -64,7 +66,7 @@ export function ActivityForm({ gear, prefill }: { gear: GearOption[]; prefill?: 
             </label>
             <label className={styles.field}>
                 watch
-                <select name="watch_id" defaultValue="">
+                <select name="watch_id" defaultValue={defaultWatch}>
                     <option value="">—</option>
                     {watches.map((w) => (
                         <option key={w.id} value={w.id}>

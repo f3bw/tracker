@@ -14,6 +14,7 @@ export type Gear = {
     kind: 'shoe' | 'watch';
     name: string;
     threshold_km: number | null;
+    is_default: number;
     total_km: number;
     total_min: number;
     activity_count: number;
@@ -53,7 +54,8 @@ const ready = (async () => {
                 user_id INTEGER NOT NULL REFERENCES users(id),
                 name TEXT NOT NULL,
                 threshold_km REAL,
-                kind TEXT NOT NULL DEFAULT 'shoe' CHECK (kind IN ('shoe','watch'))
+                kind TEXT NOT NULL DEFAULT 'shoe' CHECK (kind IN ('shoe','watch')),
+                is_default INTEGER NOT NULL DEFAULT 0
             )`,
             `CREATE TABLE IF NOT EXISTS activities (
                 id INTEGER PRIMARY KEY,
@@ -74,6 +76,7 @@ const ready = (async () => {
     for (const sql of [
         `ALTER TABLE shoes ADD COLUMN kind TEXT NOT NULL DEFAULT 'shoe'`,
         `ALTER TABLE activities ADD COLUMN watch_id INTEGER REFERENCES shoes(id)`,
+        `ALTER TABLE shoes ADD COLUMN is_default INTEGER NOT NULL DEFAULT 0`,
     ]) {
         await client.execute(sql).catch(() => {}); // duplicate column = already migrated
     }
@@ -190,6 +193,16 @@ export async function insertGear(
 
 export async function deleteGear(id: number, userId: number) {
     await run('DELETE FROM shoes WHERE id = ? AND user_id = ?', [id, userId]);
+}
+
+export async function setDefaultGear(id: number, userId: number) {
+    // one default per kind: clear siblings of the same kind, then set
+    await run(
+        `UPDATE shoes SET is_default = 0
+         WHERE user_id = ? AND kind = (SELECT kind FROM shoes WHERE id = ? AND user_id = ?)`,
+        [userId, id, userId],
+    );
+    await run('UPDATE shoes SET is_default = 1 WHERE id = ? AND user_id = ?', [id, userId]);
 }
 
 export type SportTotal = { sport: Sport; count: number; km: number; min: number };

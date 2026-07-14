@@ -9,6 +9,10 @@
         margin-bottom: var(--space-md);
     }
 
+    .section {
+        margin-bottom: var(--space-2xl);
+    }
+
     .table {
         border-collapse: collapse;
         margin-bottom: var(--space-xl);

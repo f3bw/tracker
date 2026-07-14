@@ -93,3 +93,8 @@ export async function removeGear(form: FormData) {
     await db.deleteGear(Number(form.get('id')), await currentUserId());
     revalidatePath('/gear');
 }
+
+export async function makeDefaultGear(form: FormData) {
+    await db.setDefaultGear(Number(form.get('id')), await currentUserId());
+    revalidatePath('/gear');
+}
