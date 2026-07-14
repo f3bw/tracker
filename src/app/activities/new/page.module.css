@@ -1,0 +1,6 @@
+@layer pages {
+    .heading {
+        font-size: var(--font-size-2xl);
+        margin-bottom: var(--space-xl);
+    }
+}

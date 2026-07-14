@@ -1,0 +1,37 @@
+@layer components {
+    .form {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-lg);
+        max-width: 24rem;
+    }
+
+    .field {
+        color: var(--color-muted-foreground);
+        display: flex;
+        flex-direction: column;
+        font-size: var(--font-size-sm);
+        gap: var(--space-xs);
+    }
+
+    .field input,
+    .field select,
+    .field textarea {
+        background-color: var(--color-background);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-sm);
+        color: var(--color-foreground);
+        font: inherit;
+        padding: var(--space-sm);
+    }
+
+    .submit {
+        background-color: var(--color-foreground);
+        border: none;
+        border-radius: var(--radius-sm);
+        color: var(--color-background);
+        cursor: pointer;
+        font: inherit;
+        padding: var(--space-sm) var(--space-lg);
+    }
+}
