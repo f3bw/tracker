@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { login } from '@/lib/actions';
 import styles from './page.module.css';
 
@@ -31,6 +32,9 @@ export default async function Login({
                 <button type="submit" className={styles.submit}>
                     log in
                 </button>
+                <p>
+                    <Link href="/signup">have an invite code? sign up</Link>
+                </p>
             </form>
         </>
     );

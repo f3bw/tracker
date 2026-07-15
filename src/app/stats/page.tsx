@@ -1,4 +1,4 @@
-import { Stats } from '@/features/stats/stats';
+import { Stats } from '@/features/stats';
 
 export const dynamic = 'force-dynamic';
 

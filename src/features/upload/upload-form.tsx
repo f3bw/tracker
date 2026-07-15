@@ -2,7 +2,7 @@
 
 import { useActionState } from 'react';
 import { parseFitFile } from '@/lib/actions';
-import { ActivityForm, type GearOption } from '@/components/activity-form/activity-form';
+import { ActivityForm, type GearOption } from '@/components/activity-form';
 import styles from './upload.module.css';
 
 export function UploadForm({ gear }: { gear: GearOption[] }) {
@@ -11,7 +11,7 @@ export function UploadForm({ gear }: { gear: GearOption[] }) {
     return (
         <>
             <form action={formAction} className={styles.upload}>
-                <input type="file" name="fit" accept=".fit" required />
+                <input type="file" name="fit" accept=".fit,.gpx" required />
                 <button type="submit">parse</button>
             </form>
             {state?.error && <p className={styles.error}>{state.error}</p>}

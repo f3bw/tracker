@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import { SESSION_COOKIE, verifySession } from '@/lib/auth';
-import { ActivityList } from '@/features/activity-list/activity-list';
-import { Landing } from '@/features/landing/landing';
+import { ActivityList } from '@/features/activity-list';
+import { Landing } from '@/features/landing';
 
 export const dynamic = 'force-dynamic';
 

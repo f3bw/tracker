@@ -1,4 +1,4 @@
-import { Gear } from '@/features/gear/gear';
+import { Gear } from '@/features/gear';
 
 export const dynamic = 'force-dynamic';
 

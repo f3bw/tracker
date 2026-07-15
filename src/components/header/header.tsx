@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { cookies } from 'next/headers';
 import { logout } from '@/lib/actions';
 import { SESSION_COOKIE, verifySession } from '@/lib/auth';
-import { TabBar } from '@/components/tab-bar/tab-bar';
+import { TabBar } from '@/components/tab-bar';
 import { About } from './about';
 import styles from './header.module.css';
 

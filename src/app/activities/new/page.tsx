@@ -1,4 +1,4 @@
-import { ActivityForm } from '@/components/activity-form/activity-form';
+import { ActivityForm } from '@/components/activity-form';
 import { listGear } from '@/lib/db';
 import { currentUserId } from '@/lib/current-user';
 import styles from './page.module.css';

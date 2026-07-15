@@ -8,7 +8,7 @@ Personal fitness tracker (Strava replacement) for a handful of users. Next.js 16
 pnpm dev                          # dev server (needs .env.local, see .env.example)
 pnpm build                        # production build
 pnpm test                         # node:test suite in test/
-pnpm add-user <name> <password>   # create an account (no signup page, on purpose)
+pnpm add-user <name> <password>   # create an account (signup page needs the shared INVITE_CODE)
 ```
 
 ## Architecture
@@ -29,4 +29,4 @@ pnpm add-user <name> <password>   # create an account (no signup page, on purpos
 
 ## Environment
 
-Four vars, documented in `.env.example`. Local dev can use `TURSO_DATABASE_URL=file:data/tracker.db` (offline, gitignored). Production (Vercel) uses the remote Turso URL + auth token.
+Five vars, documented in `.env.example` (`INVITE_CODE` gates `/signup`; unset disables signup). Local dev can use `TURSO_DATABASE_URL=file:data/tracker.db` (offline, gitignored). Production (Vercel) uses the remote Turso URL + auth token.

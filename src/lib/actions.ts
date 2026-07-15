@@ -6,9 +6,10 @@ import { cookies } from 'next/headers';
 import * as db from './db';
 import type { Sport } from './db';
 import { parseFit, type ParsedFit } from './fit';
+import { parseGpx } from './gpx';
 import { SESSION_COOKIE, signSession } from './auth';
 import { currentUserId } from './current-user';
-import { verifyPassword } from './password';
+import { hashPassword, verifyPassword } from './password';
 
 function num(form: FormData, key: string): number | null {
     const v = form.get(key);
@@ -18,24 +19,51 @@ function num(form: FormData, key: string): number | null {
 // ponytail: in-memory rate limit, per server instance — plenty for a handful of
 // users; move failures to the db if instances ever multiply enough to matter
 const loginFailures: number[] = [];
+const signupFailures: number[] = [];
 
-export async function login(form: FormData) {
+function rateLimit(failures: number[], lockedUrl: string) {
     const now = Date.now();
-    while (loginFailures.length && now - loginFailures[0] > 60_000) loginFailures.shift();
-    if (loginFailures.length >= 5) redirect('/login?error=locked');
+    while (failures.length && now - failures[0] > 60_000) failures.shift();
+    if (failures.length >= 5) redirect(lockedUrl);
+}
 
-    const user = await db.getUserByUsername(String(form.get('username') ?? '').trim());
-    if (!user || !verifyPassword(String(form.get('password') ?? ''), user.password_hash)) {
-        loginFailures.push(now);
-        redirect('/login?error=1');
-    }
-    (await cookies()).set(SESSION_COOKIE, await signSession(user.id), {
+async function setSession(userId: number) {
+    (await cookies()).set(SESSION_COOKIE, await signSession(userId), {
         httpOnly: true,
         secure: true,
         sameSite: 'lax',
         maxAge: 60 * 60 * 24 * 90,
         path: '/',
     });
+}
+
+export async function login(form: FormData) {
+    rateLimit(loginFailures, '/login?error=locked');
+
+    const user = await db.getUserByUsername(String(form.get('username') ?? '').trim());
+    if (!user || !verifyPassword(String(form.get('password') ?? ''), user.password_hash)) {
+        loginFailures.push(Date.now());
+        redirect('/login?error=1');
+    }
+    await setSession(user.id);
+    redirect('/');
+}
+
+export async function signup(form: FormData) {
+    rateLimit(signupFailures, '/signup?error=locked');
+
+    const invite = process.env.INVITE_CODE;
+    if (!invite || form.get('invite') !== invite) {
+        signupFailures.push(Date.now());
+        redirect('/signup?error=invite');
+    }
+    const username = String(form.get('username') ?? '').trim();
+    const password = String(form.get('password') ?? '');
+    if (!/^[\w.-]{1,30}$/.test(username) || password.length < 8) redirect('/signup?error=1');
+    if (await db.getUserByUsername(username)) redirect('/signup?error=taken');
+
+    const userId = await db.insertUser(username, hashPassword(password));
+    await setSession(userId);
     redirect('/');
 }
 
@@ -98,12 +126,14 @@ export async function parseFitFile(
     if (!(file instanceof File) || file.size === 0) return { error: 'no file' };
     try {
         const buf = Buffer.from(await file.arrayBuffer());
-        const parsed = await parseFit(buf);
+        const parsed = file.name.toLowerCase().endsWith('.gpx')
+            ? parseGpx(buf.toString('utf-8'))
+            : await parseFit(buf);
         // original file rides along so saving keeps a lossless copy
         parsed.fit_b64 = buf.toString('base64');
         return { parsed };
     } catch (e) {
-        return { error: `could not parse fit file: ${e instanceof Error ? e.message : e}` };
+        return { error: `could not parse file: ${e instanceof Error ? e.message : e}` };
     }
 }
 

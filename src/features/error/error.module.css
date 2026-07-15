@@ -1,0 +1,30 @@
+@layer pages {
+    .error {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-lg);
+        max-width: 28rem;
+    }
+
+    .heading {
+        font-size: var(--font-size-2xl);
+    }
+
+    .hint {
+        color: var(--color-muted-foreground);
+    }
+
+    /* works as <button> and as <Link> (not-found reuses it) */
+    .retry,
+    .retry:hover {
+        background-color: var(--color-foreground);
+        border: none;
+        border-radius: var(--radius-sm);
+        color: var(--color-background);
+        cursor: pointer;
+        font: inherit;
+        padding: var(--space-sm) var(--space-lg);
+        text-decoration: none;
+    }
+}

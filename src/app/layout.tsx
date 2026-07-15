@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 // globals.css must load first: it declares the @layer order the module css relies on
 import '@/styles/globals.css';
-import { Header } from '@/components/header/header';
+import { Header } from '@/components/header';
 
 export const metadata: Metadata = {
     title: 'tracker',

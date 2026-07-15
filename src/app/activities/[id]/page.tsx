@@ -1,4 +1,4 @@
-import { ActivityDetail } from '@/features/activity-detail/activity-detail';
+import { ActivityDetail } from '@/features/activity-detail';
 
 export const dynamic = 'force-dynamic';
 
